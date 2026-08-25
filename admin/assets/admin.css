@@ -1,0 +1,71 @@
+/* Xenios KB Bot — admin styles */
+
+.xkb-settings .xkb-pairs {
+	max-width: 1400px;
+}
+
+.xkb-settings .xkb-pair {
+	position: relative;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	padding: 28px 16px 14px;
+	margin: 0 0 14px;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0 20px;
+}
+
+.xkb-settings .xkb-pair-col {
+	min-width: 0;
+}
+
+/* Answer column is always the second .xkb-pair-col in DOM order (Question
+   comes first) — give it more room so longer answers need less internal
+   scrolling. */
+.xkb-settings .xkb-pair-col + .xkb-pair-col textarea {
+	min-height: 120px;
+}
+
+/* Narrow admin viewports (matches WP core's own admin-menu-fold breakpoint) —
+   fall back to the original stacked layout. */
+@media (max-width: 782px) {
+	.xkb-settings .xkb-pair {
+		grid-template-columns: 1fr;
+		padding-top: 28px;
+	}
+}
+
+.xkb-settings .xkb-pair-label {
+	display: block;
+	font-weight: 600;
+	margin: 8px 0 4px;
+}
+.xkb-settings .xkb-pair-label:first-child {
+	margin-top: 0;
+}
+
+.xkb-settings .xkb-remove-pair {
+	position: absolute;
+	top: 10px;
+	right: 12px;
+	font-size: 12px;
+	text-decoration: none;
+	color: #b32d2e;
+}
+.xkb-settings .xkb-remove-pair:hover {
+	text-decoration: underline;
+}
+
+/* Upgrade-to-pro callout (free tier) */
+.xkb-settings .xkb-upgrade-callout {
+	max-width: 720px;
+	margin: 4px 0 8px;
+	padding: 16px 18px;
+	border: 2px solid #001233;
+	border-radius: 8px;
+	background: #f6f8fc;
+	color: #001233;
+	font-size: 14px;
+	font-weight: 500;
+}

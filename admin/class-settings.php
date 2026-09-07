@@ -3,7 +3,7 @@
  * Admin settings page.
  *
  * Single settings screen under Settings → Xenios KB Bot with three sections:
- *   A. Knowledge Base   (unlimited Q&A editor template)
+ *   A. Knowledge Base   (5-entry free-version editor template)
  *   B. Bot Settings     (name, welcome message, accent colour)
  *   C. LLM Provider     (endpoint, API key, model)
  *

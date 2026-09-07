@@ -4,7 +4,7 @@ Tags: chatbot, ai, support, knowledge base, helpdesk
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,7 +28,7 @@ control of the model, the costs, and where that request is sent.
 Features:
 
 * Floating chat widget, injected site-wide on the front end
-* Unlimited knowledge base entries, stored in your WordPress database
+* Up to 5 knowledge base entries in the free version, stored in your WordPress database (unlimited entries with Xenios KnowBot)
 * Bring-your-own AI provider API key (any OpenAI-compatible chat completion endpoint)
 * Multilingual replies
 * Lightweight — no bloated dependencies
@@ -60,14 +60,21 @@ control, going only to the provider you chose.
 
 = Is there an entry limit? =
 
-No. Add as many question-and-answer pairs as you need.
+Up to 5 question-and-answer pairs in this free version. If you need more,
+[Xenios KnowBot](https://xeniacloud.eu) offers unlimited knowledge base entries.
 
 == Changelog ==
+
+= 1.1.0 =
+* Knowledge base editor now provides 5 fixed Q&A entry fields (free version limit), clearly disclosed in the editor and FAQ, with a link to the unlimited paid version.
 
 = 1.0.0 =
 * Initial public release.
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+Knowledge base is now limited to 5 Q&A entries in the free version (disclosed in-editor and in the FAQ). If you previously stored more than 5 entries, only the first 5 will be shown, and saving settings will remove any beyond that — back up your knowledge base first if needed. See the FAQ for the unlimited paid option.
 
 = 1.0.0 =
 Initial public release.

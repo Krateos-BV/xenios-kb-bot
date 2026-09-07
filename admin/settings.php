@@ -1,10 +1,9 @@
 <?php
 /**
- * Settings view — knowledge-base editor. Unlimited Q&A pairs.
+ * Settings view — knowledge-base editor. Free version: 5 Q&A pairs.
  *
- * Renders every stored Q&A pair plus one empty pair at the end, with an
- * "Add another Q&A pair" button and per-row "Remove" links (admin.js handles
- * the dynamic behaviour). Rendered inside the settings form provided by
+ * Renders exactly five static Q&A field pairs, pre-filled with any stored
+ * pairs. Rendered inside the settings form provided by
  * Xenios_KB_Bot_Settings::render_page().
  *
  * @package Xenios_KB_Bot
@@ -13,68 +12,49 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 $xenios_kb_bot_kb_pairs = Xenios_KB_Bot_KB::get_pairs();
-// Always render one empty pair at the end so there is a blank row to fill.
-$xenios_kb_bot_kb_pairs[] = array( 'question' => '', 'answer' => '' );
-
-/**
- * Render a single editable pair row.
- *
- * @param int    $index    Field index used in the input name.
- * @param string $question Question text.
- * @param string $answer   Answer text.
- */
-if ( ! function_exists( 'xenios_kb_bot_render_pair_row' ) ) :
-function xenios_kb_bot_render_pair_row( $index, $question = '', $answer = '' ) {
-	?>
-	<div class="xkb-pair" data-xkb-pair>
-		<a href="#" class="xkb-remove-pair" aria-label="<?php esc_attr_e( 'Remove this pair', 'xenios-kb-bot' ); ?>"><?php esc_html_e( 'Remove', 'xenios-kb-bot' ); ?></a>
-		<div class="xkb-pair-col">
-			<label class="xkb-pair-label"><?php esc_html_e( 'Question', 'xenios-kb-bot' ); ?></label>
-			<textarea name="xenios_kb_bot_qa[<?php echo esc_attr( $index ); ?>][question]" rows="2" class="large-text"><?php echo esc_textarea( $question ); ?></textarea>
-		</div>
-		<div class="xkb-pair-col">
-			<label class="xkb-pair-label"><?php esc_html_e( 'Answer', 'xenios-kb-bot' ); ?></label>
-			<textarea name="xenios_kb_bot_qa[<?php echo esc_attr( $index ); ?>][answer]" rows="3" class="large-text"><?php echo esc_textarea( $answer ); ?></textarea>
-		</div>
-	</div>
-	<?php
-}
-endif;
 ?>
 <p class="description">
-	<?php esc_html_e( 'Add as many question and answer pairs as you need. The bot answers visitors using only this knowledge base.', 'xenios-kb-bot' ); ?>
+	<?php
+	printf(
+		/* translators: %s: link to the paid Xenios KnowBot product. */
+		esc_html__( 'Free version supports up to 5 Q&A entries. %s', 'xenios-kb-bot' ),
+		'<a href="https://xeniacloud.eu" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Upgrade to Xenios KnowBot for unlimited entries', 'xenios-kb-bot' ) . ' &rarr;</a>'
+	);
+	?>
 </p>
 
 <div class="xkb-pairs" id="xkb-pairs">
 	<?php
-	$xenios_kb_bot_i = 0;
-	foreach ( $xenios_kb_bot_kb_pairs as $xenios_kb_bot_pair ) {
-		xenios_kb_bot_render_pair_row( $xenios_kb_bot_i, $xenios_kb_bot_pair['question'], $xenios_kb_bot_pair['answer'] );
-		$xenios_kb_bot_i++;
-	}
-	?>
+	for ( $xenios_kb_bot_i = 0; $xenios_kb_bot_i < 5; $xenios_kb_bot_i++ ) :
+		$xenios_kb_bot_pair = isset( $xenios_kb_bot_kb_pairs[ $xenios_kb_bot_i ] )
+			? $xenios_kb_bot_kb_pairs[ $xenios_kb_bot_i ]
+			: array(
+				'question' => '',
+				'answer'   => '',
+			);
+		?>
+		<div class="xkb-pair">
+			<div class="xkb-pair-col">
+				<label class="xkb-pair-label">
+					<?php
+					/* translators: %d: entry number (1-5). */
+					printf( esc_html__( 'Question %d', 'xenios-kb-bot' ), $xenios_kb_bot_i + 1 );
+					?>
+				</label>
+				<textarea name="xenios_kb_bot_qa[<?php echo esc_attr( $xenios_kb_bot_i ); ?>][question]" rows="2" class="large-text"><?php echo esc_textarea( $xenios_kb_bot_pair['question'] ); ?></textarea>
+			</div>
+			<div class="xkb-pair-col">
+				<label class="xkb-pair-label">
+					<?php
+					/* translators: %d: entry number (1-5). */
+					printf( esc_html__( 'Answer %d', 'xenios-kb-bot' ), $xenios_kb_bot_i + 1 );
+					?>
+				</label>
+				<textarea name="xenios_kb_bot_qa[<?php echo esc_attr( $xenios_kb_bot_i ); ?>][answer]" rows="3" class="large-text"><?php echo esc_textarea( $xenios_kb_bot_pair['answer'] ); ?></textarea>
+			</div>
+		</div>
+	<?php endfor; ?>
 </div>
-
-<p>
-	<button type="button" class="button button-secondary" id="xkb-add-pair">
-		<?php esc_html_e( 'Add another Q&A pair', 'xenios-kb-bot' ); ?>
-	</button>
-</p>
-
-<?php // Row template consumed by admin.js. __INDEX__ is replaced with a unique index. ?>
-<script type="text/template" id="xkb-pair-template">
-	<div class="xkb-pair" data-xkb-pair>
-		<a href="#" class="xkb-remove-pair" aria-label="<?php esc_attr_e( 'Remove this pair', 'xenios-kb-bot' ); ?>"><?php esc_html_e( 'Remove', 'xenios-kb-bot' ); ?></a>
-		<div class="xkb-pair-col">
-			<label class="xkb-pair-label"><?php esc_html_e( 'Question', 'xenios-kb-bot' ); ?></label>
-			<textarea name="xenios_kb_bot_qa[__INDEX__][question]" rows="2" class="large-text"></textarea>
-		</div>
-		<div class="xkb-pair-col">
-			<label class="xkb-pair-label"><?php esc_html_e( 'Answer', 'xenios-kb-bot' ); ?></label>
-			<textarea name="xenios_kb_bot_qa[__INDEX__][answer]" rows="3" class="large-text"></textarea>
-		</div>
-	</div>
-</script>
 
 <div class="xkb-upgrade-callout">
 	<?php

@@ -45,7 +45,7 @@ $xenios_kb_bot_kb_pairs = Xenios_KB_Bot_KB::get_pairs();
 				<label class="xkb-pair-label">
 					<?php
 					/* translators: %d: entry number (1-5). */
-					printf( esc_html__( 'Question %d', 'xenios-kb-bot' ), $xenios_kb_bot_i + 1 );
+					printf( esc_html__( 'Question %d', 'xenios-kb-bot' ), absint( $xenios_kb_bot_i + 1 ) );
 					?>
 				</label>
 				<textarea name="xenios_kb_bot_qa[<?php echo esc_attr( $xenios_kb_bot_i ); ?>][question]" rows="2" class="large-text"><?php echo esc_textarea( $xenios_kb_bot_pair['question'] ); ?></textarea>
@@ -54,7 +54,7 @@ $xenios_kb_bot_kb_pairs = Xenios_KB_Bot_KB::get_pairs();
 				<label class="xkb-pair-label">
 					<?php
 					/* translators: %d: entry number (1-5). */
-					printf( esc_html__( 'Answer %d', 'xenios-kb-bot' ), $xenios_kb_bot_i + 1 );
+					printf( esc_html__( 'Answer %d', 'xenios-kb-bot' ), absint( $xenios_kb_bot_i + 1 ) );
 					?>
 				</label>
 				<textarea name="xenios_kb_bot_qa[<?php echo esc_attr( $xenios_kb_bot_i ); ?>][answer]" rows="3" class="large-text"><?php echo esc_textarea( $xenios_kb_bot_pair['answer'] ); ?></textarea>

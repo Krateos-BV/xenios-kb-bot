@@ -18,7 +18,14 @@ $xenios_kb_bot_kb_pairs = Xenios_KB_Bot_KB::get_pairs();
 	printf(
 		/* translators: %s: link to the paid Xenios KnowBot product. */
 		esc_html__( 'Free version supports up to 5 Q&A entries. %s', 'xenios-kb-bot' ),
-		'<a href="https://xeniacloud.eu" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Upgrade to Xenios KnowBot for unlimited entries', 'xenios-kb-bot' ) . ' &rarr;</a>'
+		wp_kses(
+			sprintf(
+				'<a href="%1$s" target="_blank" rel="noopener noreferrer">%2$s &rarr;</a>',
+				esc_url( 'https://xeniacloud.eu' ),
+				esc_html__( 'Upgrade to Xenios KnowBot for unlimited entries', 'xenios-kb-bot' )
+			),
+			array( 'a' => array( 'href' => true, 'target' => true, 'rel' => true ) )
+		)
 	);
 	?>
 </p>
@@ -61,7 +68,14 @@ $xenios_kb_bot_kb_pairs = Xenios_KB_Bot_KB::get_pairs();
 	printf(
 		/* translators: %s: link to xeniacloud.eu. */
 		esc_html__( 'Want more from your AI support bot? %s', 'xenios-kb-bot' ),
-		'<a href="https://xeniacloud.eu" target="_blank" rel="noopener noreferrer">' . esc_html__( 'See what Xenios KnowBot Premium offers', 'xenios-kb-bot' ) . ' &rarr;</a>'
+		wp_kses(
+			sprintf(
+				'<a href="%1$s" target="_blank" rel="noopener noreferrer">%2$s &rarr;</a>',
+				esc_url( 'https://xeniacloud.eu' ),
+				esc_html__( 'See what Xenios KnowBot Premium offers', 'xenios-kb-bot' )
+			),
+			array( 'a' => array( 'href' => true, 'target' => true, 'rel' => true ) )
+		)
 	);
 	?>
 </div>

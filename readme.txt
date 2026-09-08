@@ -2,7 +2,7 @@
 Contributors: krateosbv, xeniatech
 Tags: chatbot, ai, support, knowledge base, helpdesk
 Requires at least: 6.4
-Tested up to: 6.7
+Tested up to: 7.1
 Requires PHP: 8.1
 Stable tag: 2026.09.08
 License: GPL-2.0-or-later
@@ -80,7 +80,7 @@ Up to 5 question-and-answer pairs in this free version. If you need more,
 Versioning scheme change only (semver → YYYY.MM.DD). No functional changes; safe to update.
 
 = 1.1.0 =
-Knowledge base is now limited to 5 Q&A entries in the free version (disclosed in-editor and in the FAQ). If you previously stored more than 5 entries, only the first 5 will be shown, and saving settings will remove any beyond that — back up your knowledge base first if needed. See the FAQ for the unlimited paid option.
+Free version now limited to 5 Q&A entries (disclosed in-editor/FAQ). If you had more than 5 saved, only the first 5 show, and re-saving settings removes the rest — back up your knowledge base first.
 
 = 1.0.0 =
 Initial public release.

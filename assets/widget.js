@@ -34,14 +34,6 @@
 	}
 	input.placeholder = PLACEHOLDER[ lang ];
 
-	// ── Session id ────────────────────────────────────────────────────────────
-	function genId() {
-		if ( window.crypto && typeof window.crypto.randomUUID === 'function' ) {
-			return window.crypto.randomUUID();
-		}
-		return 'xkb-' + Date.now().toString( 36 ) + '-' + Math.random().toString( 36 ).slice( 2, 10 );
-	}
-
 	// ── Rendering ─────────────────────────────────────────────────────────────
 	function sanitise( str ) {
 		return String( str )
@@ -92,7 +84,8 @@
 
 	// ── Networking ────────────────────────────────────────────────────────────
 	function sendMessage( text ) {
-		if ( ! sessionId ) { sessionId = genId(); }
+		// No client-side ID generation: the server mints the session ID on the
+		// first turn and we echo it back on every turn after that.
 		setLoading( true );
 		showTyping();
 
@@ -102,7 +95,7 @@
 				'Content-Type': 'application/json',
 				'X-WP-Nonce': cfg.nonce || ''
 			},
-			body: JSON.stringify( { message: text, session_id: sessionId } )
+			body: JSON.stringify( sessionId ? { message: text, session_id: sessionId } : { message: text } )
 		} ).then( function ( res ) {
 			if ( ! res.ok ) { throw new Error( 'HTTP ' + res.status ); }
 			return res.json();

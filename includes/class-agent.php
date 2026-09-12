@@ -39,6 +39,15 @@ class Xenios_KB_Bot_Agent {
 	/** Transient key prefix. */
 	const PREFIX = 'xenios_kb_bot_';
 
+	/** Max NEW sessions the site will mint state for per budget window. */
+	const MAX_NEW_SESSIONS_PER_WINDOW = 500;
+
+	/** New-session budget window in seconds (30 minutes). */
+	const SESSION_BUDGET_WINDOW = 1800;
+
+	/** Shared, fixed key holding the new-session budget for the window. */
+	const SESSION_BUDGET_KEY = self::PREFIX . 'session_budget';
+
 	public function __construct() {
 		// Stub — no construction-time state required.
 	}
@@ -62,7 +71,10 @@ class Xenios_KB_Bot_Agent {
 
 		// ── 0. Per-IP rate limit ─────────────────────────────────────────────
 		if ( ! self::check_rate_limit( $client_ip ) ) {
-			$lang = self::ensure_lang( $session_id, $message );
+			// Deliberately does NOT pin the language: a throttled request must
+			// not create session state, or a rejected flood would still mint
+			// one transient per forged session ID.
+			$lang = self::peek_lang( $session_id, $message );
 			return self::rate_limit_message( $lang );
 		}
 
@@ -380,8 +392,48 @@ class Xenios_KB_Bot_Agent {
 
 	// ── Session state (WordPress transients) ──────────────────────────────────
 
+	/**
+	 * Build a transient key. The caller-supplied part is reduced to a
+	 * fixed-length salted hash, so key material can never grow with input
+	 * length and is not guessable across sites.
+	 */
 	private static function transient_key( string $bucket, string $id ): string {
-		return self::PREFIX . $bucket . '_' . md5( $id );
+		return self::PREFIX . $bucket . '_' . wp_hash( $id );
+	}
+
+	/**
+	 * Reserve capacity for a session before any session-scoped transient is
+	 * created.
+	 *
+	 * Sessions that already hold state always pass — only genuinely new ones
+	 * consume budget. Once the window's budget is spent, this returns false and
+	 * the REST layer answers with an error instead of minting more transients,
+	 * which bounds how many rows a flood of forged session IDs can create.
+	 */
+	public static function reserve_session( string $session_id ): bool {
+		if ( false !== get_transient( self::transient_key( 'count', $session_id ) ) ) {
+			return true;
+		}
+
+		$now  = time();
+		$data = get_transient( self::SESSION_BUDGET_KEY );
+
+		if ( ! is_array( $data ) || empty( $data['expires'] ) || $now > (int) $data['expires'] ) {
+			set_transient(
+				self::SESSION_BUDGET_KEY,
+				array( 'count' => 1, 'expires' => $now + self::SESSION_BUDGET_WINDOW ),
+				self::SESSION_BUDGET_WINDOW
+			);
+			return true;
+		}
+
+		if ( (int) $data['count'] >= self::MAX_NEW_SESSIONS_PER_WINDOW ) {
+			return false;
+		}
+
+		$data['count']++;
+		set_transient( self::SESSION_BUDGET_KEY, $data, max( 1, (int) $data['expires'] - $now ) );
+		return true;
 	}
 
 	/**
@@ -426,6 +478,16 @@ class Xenios_KB_Bot_Agent {
 			set_transient( $key, $lang, self::SESSION_TTL );
 		}
 		return $lang;
+	}
+
+	/**
+	 * Language for a reply that must not create session state: reuse the pinned
+	 * language when the session already has one, otherwise detect it in memory
+	 * without persisting anything.
+	 */
+	private static function peek_lang( string $session_id, string $message ): string {
+		$lang = get_transient( self::transient_key( 'lang', $session_id ) );
+		return $lang ? (string) $lang : self::detect_lang( $message );
 	}
 
 	/**

@@ -4,7 +4,7 @@ Tags: chatbot, ai, support, knowledge base, helpdesk
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 2026.09.12
+Stable tag: 26.9.19.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -65,7 +65,7 @@ Up to 5 question-and-answer pairs in this free version. If you need more,
 
 == Changelog ==
 
-= 2026.09.12 =
+= 26.9.19.0 =
 * Security: session IDs are now issued by the server and validated as UUID v4 on every request; malformed IDs are rejected instead of being used as cache key material.
 * Security: rate limiting now keys on the connecting address by default. Forwarded headers (X-Forwarded-For / X-Real-IP) are honoured only for proxies declared via the new `xenios_kb_bot_trusted_proxies` filter.
 * Added a site-wide cap on how many new chat sessions may be created per 30-minute window, so a flood of forged session IDs cannot grow the options table without bound.
@@ -83,7 +83,7 @@ Up to 5 question-and-answer pairs in this free version. If you need more,
 
 == Upgrade Notice ==
 
-= 2026.09.12 =
+= 26.9.19.0 =
 Security update: session IDs are server-issued and validated, rate limiting no longer trusts spoofable forwarded headers, and new-session creation is capped. Sites behind a reverse proxy must add their proxy to the xenios_kb_bot_trusted_proxies filter to keep per-visitor rate limiting accurate.
 
 = 2026.09.08 =

@@ -75,12 +75,12 @@ class Xenios_KB_Bot_Settings {
 			return;
 		}
 
-		$bot_name = get_option( 'xenios_kb_bot_bot_name', 'KB Bot' );
-		$welcome  = get_option( 'xenios_kb_bot_welcome', 'Hi! How can I help you today?' );
-		$accent   = get_option( 'xenios_kb_bot_accent', self::DEFAULT_ACCENT );
-		$endpoint = get_option( 'xenios_kb_bot_llm_endpoint', '' );
-		$api_key  = get_option( 'xenios_kb_bot_llm_key', '' );
-		$model    = get_option( 'xenios_kb_bot_llm_model', self::DEFAULT_MODEL );
+		$bot_name    = get_option( 'xenios_kb_bot_bot_name', 'KB Bot' );
+		$welcome     = get_option( 'xenios_kb_bot_welcome', 'Hi! How can I help you today?' );
+		$accent      = get_option( 'xenios_kb_bot_accent', self::DEFAULT_ACCENT );
+		$endpoint    = get_option( 'xenios_kb_bot_llm_endpoint', '' );
+		$model       = get_option( 'xenios_kb_bot_llm_model', self::DEFAULT_MODEL );
+		$has_api_key = '' !== trim( (string) get_option( 'xenios_kb_bot_llm_key', '' ) );
 
 		$template = XENIOS_KB_BOT_PATH . 'admin/settings.php';
 		?>
@@ -153,8 +153,12 @@ class Xenios_KB_Bot_Settings {
 						</th>
 						<td>
 							<input name="xenios_kb_bot_llm_key" id="xkb-key" type="password"
-								class="regular-text" value="<?php echo esc_attr( $api_key ); ?>"
-								placeholder="sk-..." autocomplete="off" />
+								class="regular-text" value=""
+								placeholder="<?php echo esc_attr( $has_api_key ? __( 'A key is saved — leave blank to keep it', 'xenios-kb-bot' ) : 'sk-...' ); ?>"
+								autocomplete="off" />
+							<p class="description">
+								<?php esc_html_e( 'The saved key is never rendered back into this page. Enter a new key to replace it.', 'xenios-kb-bot' ); ?>
+							</p>
 						</td>
 					</tr>
 					<tr>
@@ -173,6 +177,39 @@ class Xenios_KB_Bot_Settings {
 			</form>
 		</div>
 		<?php
+	}
+
+	/**
+	 * True if an LLM endpoint URL is safe for the server to fetch.
+	 *
+	 * Requires https, a standard port, and a host that is not a private,
+	 * loopback or link-local address, so the setting cannot be turned into a
+	 * request against something only the server can reach.
+	 */
+	private static function is_safe_endpoint( string $url ): bool {
+		$parts = wp_parse_url( $url );
+		if ( empty( $parts['scheme'] ) || 'https' !== strtolower( $parts['scheme'] ) || empty( $parts['host'] ) ) {
+			return false;
+		}
+		if ( isset( $parts['port'] ) && 443 !== (int) $parts['port'] ) {
+			return false;
+		}
+
+		$host = $parts['host'];
+		$ips  = filter_var( $host, FILTER_VALIDATE_IP ) ? array( $host ) : (array) gethostbynamel( $host );
+		if ( empty( $ips ) ) {
+			return false;
+		}
+		foreach ( $ips as $ip ) {
+			if ( ! filter_var(
+				$ip,
+				FILTER_VALIDATE_IP,
+				FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+			) ) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/**
@@ -221,14 +258,25 @@ class Xenios_KB_Bot_Settings {
 		update_option( 'xenios_kb_bot_accent', $accent );
 
 		// ── Section C: LLM provider ──────────────────────────────────────────
-		update_option(
-			'xenios_kb_bot_llm_endpoint',
-			isset( $_POST['xenios_kb_bot_llm_endpoint'] ) ? esc_url_raw( wp_unslash( $_POST['xenios_kb_bot_llm_endpoint'] ) ) : ''
-		);
-		update_option(
-			'xenios_kb_bot_llm_key',
-			isset( $_POST['xenios_kb_bot_llm_key'] ) ? sanitize_text_field( wp_unslash( $_POST['xenios_kb_bot_llm_key'] ) ) : ''
-		);
+		$endpoint = isset( $_POST['xenios_kb_bot_llm_endpoint'] )
+			? esc_url_raw( wp_unslash( $_POST['xenios_kb_bot_llm_endpoint'] ), array( 'https' ) )
+			: '';
+		// An admin-settable URL that the server then fetches is an SSRF
+		// primitive. Accept only https, and only a host that resolves outside
+		// the private ranges, so it cannot be pointed at internal services.
+		if ( '' !== $endpoint && ! self::is_safe_endpoint( $endpoint ) ) {
+			$endpoint = (string) get_option( 'xenios_kb_bot_llm_endpoint', '' );
+		}
+		update_option( 'xenios_kb_bot_llm_endpoint', $endpoint );
+
+		// An empty field means "keep the stored key" — the form never renders
+		// the existing one back, so a blank submit must not wipe it.
+		$submitted_key = isset( $_POST['xenios_kb_bot_llm_key'] )
+			? trim( sanitize_text_field( wp_unslash( $_POST['xenios_kb_bot_llm_key'] ) ) )
+			: '';
+		if ( '' !== $submitted_key ) {
+			update_option( 'xenios_kb_bot_llm_key', $submitted_key );
+		}
 		$model = isset( $_POST['xenios_kb_bot_llm_model'] ) ? sanitize_text_field( wp_unslash( $_POST['xenios_kb_bot_llm_model'] ) ) : '';
 		if ( '' === $model ) {
 			$model = self::DEFAULT_MODEL;

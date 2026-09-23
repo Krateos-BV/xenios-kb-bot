@@ -39,6 +39,12 @@ class Xenios_KB_Bot_Agent {
 	/** Transient key prefix. */
 	const PREFIX = 'xenios_kb_bot_';
 
+	/** Hard cap on a single visitor message, in characters. */
+	const MAX_MESSAGE_CHARS = 2000;
+
+	/** Upper bound on completion length requested from the provider. */
+	const MAX_COMPLETION_TOKENS = 512;
+
 	/** Max NEW sessions the site will mint state for per budget window. */
 	const MAX_NEW_SESSIONS_PER_WINDOW = 500;
 
@@ -68,6 +74,12 @@ class Xenios_KB_Bot_Agent {
 	 */
 	public function chat( string $message, string $session_id, string $client_ip ): string {
 		$message = trim( $message );
+
+		// Bound the prompt before it reaches any budget or the provider: an
+		// unbounded message is an unbounded token bill.
+		if ( mb_strlen( $message ) > self::MAX_MESSAGE_CHARS ) {
+			$message = mb_substr( $message, 0, self::MAX_MESSAGE_CHARS );
+		}
 
 		// ── 0. Per-IP rate limit ─────────────────────────────────────────────
 		if ( ! self::check_rate_limit( $client_ip ) ) {
@@ -140,7 +152,7 @@ class Xenios_KB_Bot_Agent {
 
 		$has_off_topic = false;
 		foreach ( $off_topic_signals as $signal ) {
-			if ( strpos( $msg, $signal ) !== false ) {
+			if ( self::contains_term( $msg, $signal ) ) {
 				$has_off_topic = true;
 				break;
 			}
@@ -150,11 +162,26 @@ class Xenios_KB_Bot_Agent {
 		}
 
 		foreach ( $kb_keywords as $keyword ) {
-			if ( $keyword !== '' && strpos( $msg, $keyword ) !== false ) {
+			if ( self::contains_term( $msg, $keyword ) ) {
 				return false; // on-topic signal present
 			}
 		}
 		return true;
+	}
+
+	/**
+	 * Whole-word containment test.
+	 *
+	 * A substring match fires on any embedding of the term ("sport" inside
+	 * "passport", "game" inside "gameren"), which both mis-gates real questions
+	 * and lets short knowledge-base tokens wave off-topic messages through.
+	 * Multi-word terms ("capital of") are matched with boundaries at each end.
+	 */
+	private static function contains_term( string $haystack, string $term ): bool {
+		if ( '' === $term ) {
+			return false;
+		}
+		return 1 === preg_match( '/(?<![\p{L}\p{N}])' . preg_quote( $term, '/' ) . '(?![\p{L}\p{N}])/u', $haystack );
 	}
 
 	/**
@@ -373,6 +400,10 @@ class Xenios_KB_Bot_Agent {
 			return self::llm_error_message( $lang );
 		}
 
+		if ( false !== get_transient( self::PREFIX . 'llm_backoff' ) ) {
+			return self::rate_limit_message( $lang );
+		}
+
 		$headers = array( 'Content-Type' => 'application/json' );
 		if ( $key !== '' ) {
 			$headers['Authorization'] = 'Bearer ' . $key;
@@ -381,14 +412,18 @@ class Xenios_KB_Bot_Agent {
 		$response = wp_remote_post(
 			$endpoint,
 			array(
-				'headers' => $headers,
-				'body'    => wp_json_encode(
+				'headers'            => $headers,
+				'body'               => wp_json_encode(
 					array(
-						'model'    => $model,
-						'messages' => $messages,
+						'model'      => $model,
+						'messages'   => $messages,
+						'max_tokens' => self::MAX_COMPLETION_TOKENS,
 					)
 				),
-				'timeout' => 30,
+				'timeout'            => 30,
+				// Block redirects into internal addresses, so a compromised or
+				// hostile provider cannot bounce the request inward.
+				'reject_unsafe_urls' => true,
 			)
 		);
 
@@ -397,6 +432,16 @@ class Xenios_KB_Bot_Agent {
 		}
 
 		$code = (int) wp_remote_retrieve_response_code( $response );
+		if ( 429 === $code || 503 === $code ) {
+			// The provider is throttling us. Back off site-wide for the
+			// interval it asks for (capped), so we stop hammering a rate-limited
+			// endpoint, and tell the visitor to retry rather than showing a
+			// generic failure.
+			$retry = (int) wp_remote_retrieve_header( $response, 'retry-after' );
+			$retry = ( $retry > 0 ) ? min( $retry, 300 ) : 60;
+			set_transient( self::PREFIX . 'llm_backoff', 1, $retry );
+			return self::rate_limit_message( $lang );
+		}
 		if ( $code < 200 || $code >= 300 ) {
 			return self::llm_error_message( $lang );
 		}

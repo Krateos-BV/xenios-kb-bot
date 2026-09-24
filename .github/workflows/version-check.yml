@@ -1,0 +1,37 @@
+# Runs the release guard on every PR, so an unbumped shipped change is caught
+# before it merges rather than at the next release.
+#
+# bin/check-version-ordering.php already detects all three failure modes
+# (XNT-147/148 ordering inversions, disagreeing version strings, and shipped
+# code changed since the Stable tag last moved -- the XNT-156/XNT-171 case).
+# Nothing ran it: it was a "run before every release" tool, and both incidents
+# happened because a human did not run it. This is XNT-161.
+name: Version check
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  version-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the pull request
+        uses: actions/checkout@v4
+        with:
+          # The shipped-code-since-last-bump check walks history back to the
+          # commit that set the current Stable tag, so the shallow default is
+          # not enough to rely on.
+          fetch-depth: 0
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+
+      - name: Release guard
+        run: php bin/check-version-ordering.php

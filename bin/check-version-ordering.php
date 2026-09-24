@@ -153,7 +153,11 @@ if ($landmines) {
  * this script's own directory, do not.
  */
 $repoRoot = dirname(__DIR__);
-if (is_dir($repoRoot . '/.git') && trim((string) shell_exec('command -v git'))) {
+// A linked worktree's .git is a FILE, not a directory, so is_dir() alone
+// made this whole check skip silently and exit 0 there -- the worst
+// failure mode for a guard. Verified: before this, a worktree with an
+// unbumped shipped change passed. (XNT-161)
+if (file_exists($repoRoot . '/.git') && trim((string) shell_exec('command -v git'))) {
     $tagCommit = trim((string) shell_exec(
         'git -C ' . escapeshellarg($repoRoot)
         . ' log -1 --format=%H -S' . escapeshellarg('Stable tag: ' . $current) . ' -- readme.txt 2>/dev/null'

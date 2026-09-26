@@ -23,6 +23,9 @@ class Xenios_KB_Bot_Settings {
 	const NONCE_NAME = 'xenios_kb_bot_settings_nonce';
 
 	const DEFAULT_ACCENT = '#0044cc';
+
+	/** Knowledge-base entries the free version stores (see admin/settings.php). */
+	const MAX_KB_ENTRIES = 5;
 	const DEFAULT_MODEL  = 'mistral-small-latest';
 
 	public function __construct() {
@@ -46,7 +49,7 @@ class Xenios_KB_Bot_Settings {
 	}
 
 	/**
-	 * Enqueue admin CSS/JS on the settings screen only.
+	 * Enqueue admin CSS on the settings screen only.
 	 */
 	public static function enqueue_assets( $hook ) {
 		if ( 'settings_page_' . self::MENU_SLUG !== $hook ) {
@@ -57,13 +60,6 @@ class Xenios_KB_Bot_Settings {
 			XENIOS_KB_BOT_URL . 'admin/assets/admin.css',
 			array(),
 			XENIOS_KB_BOT_VERSION
-		);
-		wp_enqueue_script(
-			'xenios-kb-bot-admin',
-			XENIOS_KB_BOT_URL . 'admin/assets/admin.js',
-			array(),
-			XENIOS_KB_BOT_VERSION,
-			true
 		);
 	}
 
@@ -87,9 +83,14 @@ class Xenios_KB_Bot_Settings {
 		<div class="wrap xkb-settings">
 			<h1><?php esc_html_e( 'Xenios KB Bot', 'xenios-kb-bot' ); ?></h1>
 
-			<?php if ( isset( $_GET['updated'] ) ) : ?>
-				<div class="notice notice-success is-dismissible">
-					<p><?php esc_html_e( 'Settings saved.', 'xenios-kb-bot' ); ?></p>
+			<?php
+			// "Settings saved." comes from core (wp-admin/options-head.php) for
+			// the updated=1 flag; printing our own as well showed it twice.
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only flag set by our own redirect.
+			if ( isset( $_GET['endpoint_rejected'] ) ) :
+				?>
+				<div class="notice notice-error">
+					<p><?php esc_html_e( 'The endpoint URL was not saved: it must use https on the standard port and point to a public address, not a private, loopback or link-local one. The previous endpoint was kept. Your other settings were saved.', 'xenios-kb-bot' ); ?></p>
 				</div>
 			<?php endif; ?>
 
@@ -240,6 +241,9 @@ class Xenios_KB_Bot_Settings {
 				);
 			}
 		}
+		// The form only renders five pairs, but a hand-crafted POST could send
+		// any number; enforce the free-version limit here, not just in the UI.
+		$pairs = array_slice( $pairs, 0, self::MAX_KB_ENTRIES );
 		Xenios_KB_Bot_KB::save( $pairs );
 
 		// ── Section B: Bot settings ──────────────────────────────────────────
@@ -264,8 +268,10 @@ class Xenios_KB_Bot_Settings {
 		// An admin-settable URL that the server then fetches is an SSRF
 		// primitive. Accept only https, and only a host that resolves outside
 		// the private ranges, so it cannot be pointed at internal services.
+		$endpoint_rejected = false;
 		if ( '' !== $endpoint && ! self::is_safe_endpoint( $endpoint ) ) {
-			$endpoint = (string) get_option( 'xenios_kb_bot_llm_endpoint', '' );
+			$endpoint          = (string) get_option( 'xenios_kb_bot_llm_endpoint', '' );
+			$endpoint_rejected = true;
 		}
 		update_option( 'xenios_kb_bot_llm_endpoint', $endpoint );
 
@@ -286,8 +292,11 @@ class Xenios_KB_Bot_Settings {
 		wp_safe_redirect(
 			add_query_arg(
 				array(
-					'page'    => self::MENU_SLUG,
-					'updated' => '1',
+					'page' => self::MENU_SLUG,
+					// Tell the admin, rather than silently keeping the old value
+					// and letting them believe the new one was saved. Not with
+					// updated=1: core would add a contradictory "Settings saved."
+					$endpoint_rejected ? 'endpoint_rejected' : 'updated' => '1',
 				),
 				admin_url( 'options-general.php' )
 			)

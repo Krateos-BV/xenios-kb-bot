@@ -4,7 +4,7 @@ Tags: chatbot, ai, support, knowledge base, helpdesk
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 26.9.26.3
+Stable tag: 26.9.26.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -65,6 +65,14 @@ Up to 5 question-and-answer pairs in this free version. If you need more,
 
 == Changelog ==
 
+= 26.9.26.4 =
+* Fixed: on WordPress 6.4 to 6.6, the plugin's bundled translations in /languages were never loaded (WordPress 6.7 and later load them automatically). The translation template (languages/xenios-kb-bot.pot), which was empty, now contains all of the plugin's strings.
+* Fixed: the chat widget's Send button reverted to English after each message instead of keeping its translated label.
+* The settings page now shows an error when an AI endpoint URL is rejected (it must be https on the standard port and point to a public address). Previously the old endpoint was silently kept, so the new one looked saved when it was not. The settings page also no longer shows "Settings saved." twice.
+* The 5-entry knowledge base limit is now also enforced when settings are saved, not only in the form.
+* Removed an unused admin script left over from the paid version.
+* Internal: renamed a class constant that uses a reserved word, ahead of its deprecation in PHP 8.6.
+
 = 26.9.26.3 =
 * Fixed: on sites with full-page caching (WP Rocket, Cloudflare, host caches), the chat stopped working about a day after a page was cached and showed "Something went wrong" to every visitor until the cache was purged. The widget now fetches a current security token from the site instead of relying on the one printed into the page, and renews it if a page is left open past its expiry. Pages cached before this update start working again as soon as it is installed.
 
@@ -100,6 +108,9 @@ Up to 5 question-and-answer pairs in this free version. If you need more,
 * Initial public release.
 
 == Upgrade Notice ==
+
+= 26.9.26.4 =
+Loads the plugin's bundled translations on WordPress 6.4 to 6.6, keeps the Send button translated, and tells you when an AI endpoint URL is rejected instead of silently ignoring it. No configuration changes needed.
 
 = 26.9.26.3 =
 Fixes the chat widget failing with "Something went wrong" on sites that use page caching. No configuration changes needed, and no cache purge needed.

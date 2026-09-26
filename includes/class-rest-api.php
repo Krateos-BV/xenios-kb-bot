@@ -18,7 +18,9 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 class Xenios_KB_Bot_REST {
 
-	const NAMESPACE = 'xenios-kb-bot/v1';
+	// Not `NAMESPACE`: using that reserved word as a constant name is
+	// deprecated as of PHP 8.6.
+	const REST_NAMESPACE = 'xenios-kb-bot/v1';
 
 	public function __construct() {
 		// Stub.
@@ -30,7 +32,7 @@ class Xenios_KB_Bot_REST {
 
 	public static function register_routes() {
 		register_rest_route(
-			self::NAMESPACE,
+			self::REST_NAMESPACE,
 			'/chat',
 			array(
 				'methods'             => 'POST',
@@ -40,7 +42,7 @@ class Xenios_KB_Bot_REST {
 		);
 
 		register_rest_route(
-			self::NAMESPACE,
+			self::REST_NAMESPACE,
 			'/nonce',
 			array(
 				'methods'             => 'GET',
@@ -50,7 +52,7 @@ class Xenios_KB_Bot_REST {
 		);
 
 		register_rest_route(
-			self::NAMESPACE,
+			self::REST_NAMESPACE,
 			'/session',
 			array(
 				'methods'             => 'DELETE',

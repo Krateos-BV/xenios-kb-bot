@@ -65,8 +65,9 @@ class Xenios_KB_Bot_Widget {
 			'xenios-kb-bot-widget',
 			'xenios_kb_bot_cfg',
 			array(
+				// No nonce here: this config is frozen into cached pages, and a
+				// nonce in it expires. The widget fetches one from /nonce.
 				'rest_url' => esc_url_raw( rest_url( 'xenios-kb-bot/v1/' ) ),
-				'nonce'    => wp_create_nonce( 'wp_rest' ),
 				'bot_name' => get_option( 'xenios_kb_bot_bot_name', 'KB Bot' ),
 				'welcome'  => get_option( 'xenios_kb_bot_welcome', 'Hi! How can I help you today?' ),
 				'accent'   => $accent,

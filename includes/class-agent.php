@@ -608,10 +608,31 @@ class Xenios_KB_Bot_Agent {
 	}
 
 	/**
+	 * The rate-limit bucket an address belongs to.
+	 *
+	 * IPv4 addresses are their own bucket. IPv6 addresses are grouped by /64:
+	 * that is the smallest block ISPs hand a single subscriber, so one home
+	 * connection or cheap VPS controls ~18 quintillion addresses, and keying
+	 * on the full /128 would give it that many separate rate limits.
+	 * IPv4-mapped IPv6 (::ffff:a.b.c.d, as dual-stack servers may report it)
+	 * is unwrapped to plain IPv4 so both spellings share one bucket.
+	 */
+	private static function rate_limit_bucket( string $ip ): string {
+		$packed = inet_pton( $ip );
+		if ( false === $packed || 16 !== strlen( $packed ) ) {
+			return $ip;
+		}
+		if ( 0 === strncmp( $packed, str_repeat( "\0", 10 ) . "\xff\xff", 12 ) ) {
+			return (string) inet_ntop( substr( $packed, 12 ) );
+		}
+		return inet_ntop( substr( $packed, 0, 8 ) . str_repeat( "\0", 8 ) ) . '/64';
+	}
+
+	/**
 	 * Fixed-window per-IP rate limit. Returns true if the request is allowed.
 	 */
 	private static function check_rate_limit( string $client_ip ): bool {
-		$key  = self::transient_key( 'rl', $client_ip );
+		$key  = self::transient_key( 'rl', self::rate_limit_bucket( $client_ip ) );
 		$now  = time();
 		$data = get_transient( $key );
 

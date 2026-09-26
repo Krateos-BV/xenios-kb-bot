@@ -1,7 +1,9 @@
 /* Xenios KB Bot — front-end chat widget
  * Ported from the XeniaCloud support widget. The in-memory CSRF token system is
- * gone — the WordPress REST nonce (X-WP-Nonce) handles CSRF. Bot name and
- * welcome message come from xenios_kb_bot_cfg. No honeypot, no transcript email.
+ * gone — the WordPress REST nonce (X-WP-Nonce) is fetched from the server, not
+ * read from the page, so pages served from a full-page cache keep working. Bot
+ * name and welcome message come from xenios_kb_bot_cfg. No honeypot, no
+ * transcript email.
  */
 ( function () {
 	'use strict';
@@ -9,11 +11,13 @@
 	var cfg = window.xenios_kb_bot_cfg || {};
 	var CHAT_URL = cfg.rest_url ? cfg.rest_url + 'chat' : '';
 	var SESSION_URL = cfg.rest_url ? cfg.rest_url + 'session' : '';
+	var NONCE_URL = cfg.rest_url ? cfg.rest_url + 'nonce' : '';
 
 	var lang = ( navigator.language || 'en' ).toLowerCase().indexOf( 'nl' ) === 0 ? 'nl' : 'en';
 	var PLACEHOLDER = { en: 'Type your message…', nl: 'Typ je bericht…' };
 
 	var sessionId = null;
+	var nonce = null;
 	var idleTimer = null;
 
 	var bubble   = document.getElementById( 'xkb-bubble' );
@@ -83,20 +87,51 @@
 	}
 
 	// ── Networking ────────────────────────────────────────────────────────────
+	// This page, and the config printed into it, may come from a full-page
+	// cache and be days old, so a nonce baked into it would long have expired.
+	// Ask the server for a current one instead. Every request goes without
+	// cookies: the chat never uses the visitor's login, and this way the nonce
+	// is the logged-out one for everybody and verifies the same for all.
+	function getNonce( fresh ) {
+		if ( nonce && ! fresh ) { return Promise.resolve( nonce ); }
+		return fetch( NONCE_URL, { credentials: 'omit', cache: 'no-store' } ).then( function ( res ) {
+			if ( ! res.ok ) { throw new Error( 'HTTP ' + res.status ); }
+			return res.json();
+		} ).then( function ( data ) {
+			if ( ! data || ! data.nonce ) { throw new Error( 'No nonce' ); }
+			nonce = data.nonce;
+			return nonce;
+		} );
+	}
+
+	// Call a nonce-protected route. If the nonce expired while the page stayed
+	// open, the server answers 403: get a new nonce and retry once.
+	function apiFetch( url, method, body ) {
+		function attempt( fresh ) {
+			return getNonce( fresh ).then( function ( n ) {
+				return fetch( url, {
+					method: method,
+					credentials: 'omit',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-WP-Nonce': n
+					},
+					body: JSON.stringify( body )
+				} );
+			} );
+		}
+		return attempt( false ).then( function ( res ) {
+			return 403 === res.status ? attempt( true ) : res;
+		} );
+	}
+
 	function sendMessage( text ) {
 		// No client-side ID generation: the server mints the session ID on the
 		// first turn and we echo it back on every turn after that.
 		setLoading( true );
 		showTyping();
 
-		fetch( CHAT_URL, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				'X-WP-Nonce': cfg.nonce || ''
-			},
-			body: JSON.stringify( sessionId ? { message: text, session_id: sessionId } : { message: text } )
-		} ).then( function ( res ) {
+		apiFetch( CHAT_URL, 'POST', sessionId ? { message: text, session_id: sessionId } : { message: text } ).then( function ( res ) {
 			if ( ! res.ok ) { throw new Error( 'HTTP ' + res.status ); }
 			return res.json();
 		} ).then( function ( data ) {
@@ -123,14 +158,7 @@
 	function doEndChat() {
 		if ( ! sessionId ) { return Promise.resolve(); }
 		var sid = sessionId;
-		return fetch( SESSION_URL, {
-			method: 'DELETE',
-			headers: {
-				'Content-Type': 'application/json',
-				'X-WP-Nonce': cfg.nonce || ''
-			},
-			body: JSON.stringify( { session_id: sid } )
-		} ).catch( function () { /* silent */ } );
+		return apiFetch( SESSION_URL, 'DELETE', { session_id: sid } ).catch( function () { /* silent */ } );
 	}
 
 	function resetWidget() {

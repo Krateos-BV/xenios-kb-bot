@@ -5,10 +5,11 @@
  * Routes (namespace xenios-kb-bot/v1):
  *   POST   /chat     → one chat turn, returns { response, session_id }
  *   DELETE /session  → clears a session's transient state, returns { cleared }
+ *   GET    /nonce    → a fresh REST nonce for the two routes above, returns { nonce }
  *
- * Both routes are public (permission __return_true) but require a valid WordPress
- * REST nonce in the X-WP-Nonce header — this is the CSRF protection that replaces
- * the old in-memory support-token system.
+ * All routes are public (permission __return_true). /chat and /session require a
+ * valid WordPress REST nonce in the X-WP-Nonce header, which the widget gets from
+ * /nonce rather than from the page, so cached pages keep working.
  *
  * @package Xenios_KB_Bot
  */
@@ -34,6 +35,16 @@ class Xenios_KB_Bot_REST {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( __CLASS__, 'handle_chat' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/nonce',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'handle_nonce' ),
 				'permission_callback' => '__return_true',
 			)
 		);
@@ -109,6 +120,32 @@ class Xenios_KB_Bot_REST {
 			),
 			200
 		);
+	}
+
+	/**
+	 * GET /nonce — a fresh REST nonce for the widget.
+	 *
+	 * A nonce printed into the page expires after a day, but full-page caches
+	 * (WP Rocket, Cloudflare, host caches) keep serving that page far longer,
+	 * and every chat request from it then failed with invalid_nonce. The widget
+	 * asks here instead, so its nonce is always current however old the page.
+	 *
+	 * The widget calls this and the chat routes without cookies, so the nonce
+	 * is always the logged-out one and verifies the same way for everybody.
+	 * That nonce was already readable by anyone who loads a page; this route
+	 * gives nothing new away. Abuse is bounded by the rate limits, not by it.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function handle_nonce() {
+		$response = new WP_REST_Response( array( 'nonce' => wp_create_nonce( 'wp_rest' ) ), 200 );
+		// A cached copy of this response would recreate the bug it exists to fix.
+		foreach ( wp_get_nocache_headers() as $name => $value ) {
+			if ( $value ) {
+				$response->header( $name, $value );
+			}
+		}
+		return $response;
 	}
 
 	/**

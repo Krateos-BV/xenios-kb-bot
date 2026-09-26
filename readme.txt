@@ -4,7 +4,7 @@ Tags: chatbot, ai, support, knowledge base, helpdesk
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 26.9.23.0
+Stable tag: 26.9.26.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -65,6 +65,10 @@ Up to 5 question-and-answer pairs in this free version. If you need more,
 
 == Changelog ==
 
+= 26.9.26.0 =
+* Security: the per-visitor rate limit now runs before the site-wide new-session cap. Previously one visitor could use up the whole cap on their own and lock every other visitor out of the chat for up to 30 minutes.
+* Security: behind a trusted proxy, the visitor address is now read from the right-hand (proxy-written) end of X-Forwarded-For instead of the left-hand entry, which the visitor controls. A visitor can no longer rotate that entry to escape the rate limit. With a chain of proxies, list every hop in the `xenios_kb_bot_trusted_proxies` filter.
+
 = 26.9.23.0 =
 * Security: knowledge base content is now fenced into an explicitly-untrusted block in the AI system prompt, with a per-request random fence tag, so text pasted in from vendor FAQs or customer email cannot escape into instruction context.
 * Security: the configured AI endpoint is now validated on save — https only, standard port, and a host outside the private, loopback and link-local ranges — so the setting cannot be pointed at internal services.
@@ -91,6 +95,9 @@ Up to 5 question-and-answer pairs in this free version. If you need more,
 * Initial public release.
 
 == Upgrade Notice ==
+
+= 26.9.26.0 =
+Security update. Stops a single visitor from locking everyone else out of the chat, and closes a rate-limit bypass for sites behind a reverse proxy. If you run a chain of proxies (for example Cloudflare in front of Traefik), add every proxy to the xenios_kb_bot_trusted_proxies filter.
 
 = 26.9.23.0 =
 Security update. Hardens the AI prompt against instructions embedded in knowledge base text, validates the provider endpoint against internal addresses, stops rendering the saved API key into the settings page, and bounds what a single message can cost. No configuration changes needed, and your saved API key is preserved.

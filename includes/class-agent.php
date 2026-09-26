@@ -8,7 +8,9 @@
  * driven resolver suitable for any WordPress site.
  *
  * Gate order (deterministic, evaluated top to bottom):
- *   0. Per-IP rate limit          → polite "slow down" message
+ *   0. Per-IP rate limit          → polite "slow down" message (run by the
+ *                                    REST layer via throttle_reply(), before
+ *                                    the session budget is reserved)
  *   1. Per-session message cap     → polite "new chat" message
  *   2. Off-topic check             → closed in chat
  *   3. Abuse / probe check         → closed in chat
@@ -69,10 +71,9 @@ class Xenios_KB_Bot_Agent {
 	 *
 	 * @param string $message    The visitor's message.
 	 * @param string $session_id Opaque per-conversation identifier.
-	 * @param string $client_ip  The visitor's IP (used only for rate limiting).
 	 * @return string Plain-text reply (the REST layer handles JSON wrapping).
 	 */
-	public function chat( string $message, string $session_id, string $client_ip ): string {
+	public function chat( string $message, string $session_id ): string {
 		$message = trim( $message );
 
 		// Bound the prompt before it reaches any budget or the provider: an
@@ -82,13 +83,8 @@ class Xenios_KB_Bot_Agent {
 		}
 
 		// ── 0. Per-IP rate limit ─────────────────────────────────────────────
-		if ( ! self::check_rate_limit( $client_ip ) ) {
-			// Deliberately does NOT pin the language: a throttled request must
-			// not create session state, or a rejected flood would still mint
-			// one transient per forged session ID.
-			$lang = self::peek_lang( $session_id, $message );
-			return self::rate_limit_message( $lang );
-		}
+		// Checked by the REST layer via throttle_reply(), before the session
+		// budget is reserved; see there.
 
 		// ── 1. Per-session message cap ───────────────────────────────────────
 		$count = self::increment_msg_count( $session_id );
@@ -587,6 +583,28 @@ class Xenios_KB_Bot_Agent {
 	private static function peek_lang( string $session_id, string $message ): string {
 		$lang = get_transient( self::transient_key( 'lang', $session_id ) );
 		return $lang ? (string) $lang : self::detect_lang( $message );
+	}
+
+	/**
+	 * Gate 0: per-IP rate limit. Returns null if the request may proceed, or the
+	 * polite "slow down" reply if it is throttled.
+	 *
+	 * Public because the REST layer must run it BEFORE reserve_session():
+	 * otherwise a single client can spend the whole site-wide new-session
+	 * budget and lock every other visitor out.
+	 *
+	 * Deliberately does NOT pin the language: a throttled request must not
+	 * create session state, or a rejected flood would still mint one transient
+	 * per forged session ID.
+	 */
+	public static function throttle_reply( string $message, string $session_id, string $client_ip ): ?string {
+		if ( self::check_rate_limit( $client_ip ) ) {
+			return null;
+		}
+		// Same bound chat() applies, so a throttled flood of huge messages
+		// cannot make language detection expensive either.
+		$message = mb_substr( trim( $message ), 0, self::MAX_MESSAGE_CHARS );
+		return self::rate_limit_message( self::peek_lang( $session_id, $message ) );
 	}
 
 	/**

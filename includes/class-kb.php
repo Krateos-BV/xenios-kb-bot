@@ -50,7 +50,7 @@ class Xenios_KB_Bot_KB {
 	/**
 	 * Persist the knowledge-base pairs. No entry limit.
 	 *
-	 * @param array<int,array{question:string,answer:string}> $pairs
+	 * @param array<int,mixed> $pairs Raw input, e.g. straight from the settings form; every entry is validated and sanitised here.
 	 */
 	public static function save( array $pairs ): void {
 		$clean = array();

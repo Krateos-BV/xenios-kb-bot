@@ -1,0 +1,36 @@
+# Static checks on every PR: PHPCS (WordPress security, i18n, PHP 8.1+
+# compatibility; see phpcs.xml.dist) and PHPStan (level 5, see
+# phpstan.neon.dist). Before this, CI ran only the release guard, so an
+# unescaped echo or a PHP 8.1 incompatibility could merge unnoticed.
+name: Lint
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the pull request
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          # The plugin's minimum; composer.json pins the platform to match.
+          php-version: '8.1'
+          coverage: none
+          tools: composer:v2
+
+      - name: Install dev tools (exact versions from composer.lock)
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: PHPCS
+        run: vendor/bin/phpcs
+
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G

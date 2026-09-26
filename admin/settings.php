@@ -32,7 +32,7 @@ $xenios_kb_bot_kb_pairs = Xenios_KB_Bot_KB::get_pairs();
 
 <div class="xkb-pairs" id="xkb-pairs">
 	<?php
-	for ( $xenios_kb_bot_i = 0; $xenios_kb_bot_i < 5; $xenios_kb_bot_i++ ) :
+	for ( $xenios_kb_bot_i = 0; $xenios_kb_bot_i < Xenios_KB_Bot_Settings::MAX_KB_ENTRIES; $xenios_kb_bot_i++ ) :
 		$xenios_kb_bot_pair = isset( $xenios_kb_bot_kb_pairs[ $xenios_kb_bot_i ] )
 			? $xenios_kb_bot_kb_pairs[ $xenios_kb_bot_i ]
 			: array(
@@ -48,7 +48,7 @@ $xenios_kb_bot_kb_pairs = Xenios_KB_Bot_KB::get_pairs();
 					printf( esc_html__( 'Question %d', 'xenios-kb-bot' ), absint( $xenios_kb_bot_i + 1 ) );
 					?>
 				</label>
-				<textarea name="xenios_kb_bot_qa[<?php echo esc_attr( $xenios_kb_bot_i ); ?>][question]" rows="2" class="large-text"><?php echo esc_textarea( $xenios_kb_bot_pair['question'] ); ?></textarea>
+				<textarea name="xenios_kb_bot_qa[<?php echo absint( $xenios_kb_bot_i ); ?>][question]" rows="2" class="large-text"><?php echo esc_textarea( $xenios_kb_bot_pair['question'] ); ?></textarea>
 			</div>
 			<div class="xkb-pair-col">
 				<label class="xkb-pair-label">
@@ -57,7 +57,7 @@ $xenios_kb_bot_kb_pairs = Xenios_KB_Bot_KB::get_pairs();
 					printf( esc_html__( 'Answer %d', 'xenios-kb-bot' ), absint( $xenios_kb_bot_i + 1 ) );
 					?>
 				</label>
-				<textarea name="xenios_kb_bot_qa[<?php echo esc_attr( $xenios_kb_bot_i ); ?>][answer]" rows="3" class="large-text"><?php echo esc_textarea( $xenios_kb_bot_pair['answer'] ); ?></textarea>
+				<textarea name="xenios_kb_bot_qa[<?php echo absint( $xenios_kb_bot_i ); ?>][answer]" rows="3" class="large-text"><?php echo esc_textarea( $xenios_kb_bot_pair['answer'] ); ?></textarea>
 			</div>
 		</div>
 	<?php endfor; ?>

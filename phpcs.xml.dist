@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<ruleset name="Xenios KB Bot">
+	<description>Security, i18n and PHP compatibility checks run in CI. Formatting rules from WordPress-Extra are deliberately not enforced (yet): the existing code predates them and a mass reformat would bury real changes.</description>
+
+	<file>xenios-kb-bot.php</file>
+	<file>uninstall.php</file>
+	<file>includes</file>
+	<file>admin</file>
+
+	<arg name="extensions" value="php"/>
+	<arg value="sp"/>
+	<arg name="colors"/>
+
+	<!-- Output escaping, input sanitising, nonces, redirects, SQL. -->
+	<rule ref="WordPress.Security"/>
+	<rule ref="WordPress.DB.PreparedSQL"/>
+	<rule ref="WordPress.DB.PreparedSQLPlaceholders"/>
+	<rule ref="WordPress.DB.DirectDatabaseQuery"/>
+	<rule ref="WordPress.PHP.NoSilencedErrors"/>
+
+	<!-- Translatable strings must use this plugin's text domain. -->
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="xenios-kb-bot"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Globals the plugin defines must carry its prefix. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="xenios_kb_bot"/>
+				<element value="Xenios_KB_Bot"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Must run on every PHP version the plugin header allows. -->
+	<config name="testVersion" value="8.1-"/>
+	<rule ref="PHPCompatibilityWP"/>
+</ruleset>

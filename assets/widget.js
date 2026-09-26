@@ -33,6 +33,10 @@
 		return;
 	}
 
+	// The button label is rendered (and translated) server-side; keep it rather
+	// than hardcoding English when the button returns from its loading state.
+	var sendLabel = sendBtn.textContent;
+
 	if ( title && cfg.bot_name ) {
 		title.textContent = cfg.bot_name;
 	}
@@ -77,7 +81,7 @@
 
 	function setLoading( on ) {
 		sendBtn.disabled = on;
-		sendBtn.textContent = on ? '…' : 'Send';
+		sendBtn.textContent = on ? '…' : sendLabel;
 	}
 
 	function errorText() {

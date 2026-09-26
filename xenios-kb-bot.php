@@ -3,7 +3,7 @@
  * Plugin Name: Xenios KB Bot
  * Plugin URI:  https://github.com/Krateos-BV/xenios-kb-bot
  * Description: AI-powered chatbot driven entirely by your own knowledge base. Your knowledge base stays in your WordPress database — only the visitor's question and the knowledge base content needed to answer it are sent to the AI provider you configure with your own API key.
- * Version:     26.9.26.3
+ * Version:     26.9.26.4
  * Author:      Krateos BV
  * Author URI:  https://xeniacloud.eu
  * License:     GPL-2.0-or-later
@@ -16,7 +16,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'XENIOS_KB_BOT_VERSION', '26.9.26.3' );
+define( 'XENIOS_KB_BOT_VERSION', '26.9.26.4' );
 define( 'XENIOS_KB_BOT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'XENIOS_KB_BOT_URL', plugin_dir_url( __FILE__ ) );
 
@@ -26,6 +26,13 @@ require_once XENIOS_KB_BOT_PATH . 'includes/class-agent.php';
 require_once XENIOS_KB_BOT_PATH . 'includes/class-rest-api.php';
 require_once XENIOS_KB_BOT_PATH . 'includes/class-widget.php';
 require_once XENIOS_KB_BOT_PATH . 'admin/class-settings.php';
+
+// Bundled translations in /languages. WordPress 6.7+ registers a plugin's
+// Domain Path by itself, but 6.4-6.6 (which "Requires at least" allows) only
+// look there when told to; without this, those sites never load them.
+add_action( 'init', function() {
+    load_plugin_textdomain( 'xenios-kb-bot', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+} );
 
 add_action( 'plugins_loaded', function() {
     Xenios_KB_Bot_REST::init();

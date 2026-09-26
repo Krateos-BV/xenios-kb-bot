@@ -344,8 +344,8 @@ class Xenios_KB_Bot_Agent {
 			$prompt .= "(The knowledge base is currently empty.)\n";
 		} else {
 			foreach ( $pairs as $pair ) {
-				$q = isset( $pair['question'] ) ? trim( (string) $pair['question'] ) : '';
-				$a = isset( $pair['answer'] ) ? trim( (string) $pair['answer'] ) : '';
+				$q = trim( $pair['question'] );
+				$a = trim( $pair['answer'] );
 				if ( $q === '' && $a === '' ) {
 					continue;
 				}
@@ -468,8 +468,7 @@ class Xenios_KB_Bot_Agent {
 	private static function kb_keywords( array $pairs ): array {
 		$blob = '';
 		foreach ( $pairs as $pair ) {
-			$blob .= ' ' . ( isset( $pair['question'] ) ? $pair['question'] : '' );
-			$blob .= ' ' . ( isset( $pair['answer'] ) ? $pair['answer'] : '' );
+			$blob .= ' ' . $pair['question'] . ' ' . $pair['answer'];
 		}
 		$blob   = self::lower( $blob );
 		$tokens = preg_split( '/[^\p{L}\p{N}]+/u', $blob, -1, PREG_SPLIT_NO_EMPTY );

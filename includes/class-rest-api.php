@@ -74,6 +74,24 @@ class Xenios_KB_Bot_REST {
 			return new WP_REST_Response( array( 'error' => 'invalid_session_id' ), 400 );
 		}
 
+		$client_ip = self::client_ip();
+
+		// Per-IP rate limit BEFORE the site-wide session budget. The other way
+		// round, one client could spend the whole budget alone (every request
+		// with no or a fresh ID is a new session, and a throttled session never
+		// stores state, so resending it spends budget again) and lock every
+		// other visitor out of the chat.
+		$throttled = Xenios_KB_Bot_Agent::throttle_reply( $message, $session_id, $client_ip );
+		if ( null !== $throttled ) {
+			return new WP_REST_Response(
+				array(
+					'response'   => $throttled,
+					'session_id' => $session_id,
+				),
+				200
+			);
+		}
+
 		// Refuse to mint session state once the site-wide new-session budget for
 		// this window is spent, so forged IDs cannot grow the options table
 		// without bound.
@@ -81,10 +99,8 @@ class Xenios_KB_Bot_REST {
 			return new WP_REST_Response( array( 'error' => 'session_capacity_reached' ), 429 );
 		}
 
-		$client_ip = self::client_ip();
-
 		$agent = new Xenios_KB_Bot_Agent();
-		$reply = $agent->chat( $message, $session_id, $client_ip );
+		$reply = $agent->chat( $message, $session_id );
 
 		return new WP_REST_Response(
 			array(
@@ -164,6 +180,10 @@ class Xenios_KB_Bot_REST {
 		 *
 		 *   add_filter( 'xenios_kb_bot_trusted_proxies', fn() => array( '10.0.0.1' ) );
 		 *
+		 * With a chain of proxies (e.g. Cloudflare in front of Traefik), list
+		 * every hop: the first untrusted address from the right of
+		 * X-Forwarded-For is taken as the client.
+		 *
 		 * @param string[] $proxies Trusted proxy IP addresses.
 		 */
 		$trusted = array_map( 'strval', (array) apply_filters( 'xenios_kb_bot_trusted_proxies', array() ) );
@@ -172,12 +192,31 @@ class Xenios_KB_Bot_REST {
 			return $remote;
 		}
 
-		foreach ( array( 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP' ) as $key ) {
-			if ( empty( $_SERVER[ $key ] ) ) {
-				continue;
+		if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+			// Each proxy APPENDS the address it received the request from, so
+			// only the right-hand end of the list is proxy-written; everything
+			// to the left is whatever the client sent. Walk from the right past
+			// our own trusted proxies and take the first address they did not
+			// add — never the leftmost entry, which the client picks freely and
+			// could rotate to get a fresh rate-limit bucket on every request.
+			$hops = explode( ',', sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) );
+			foreach ( array_reverse( $hops ) as $hop ) {
+				$hop = trim( $hop );
+				if ( ! filter_var( $hop, FILTER_VALIDATE_IP ) ) {
+					// Anything past a malformed entry is unverifiable.
+					break;
+				}
+				if ( ! in_array( $hop, $trusted, true ) ) {
+					return $hop;
+				}
 			}
-			// X-Forwarded-For can be a comma-separated list; take the first.
-			$ip = trim( explode( ',', sanitize_text_field( wp_unslash( (string) $_SERVER[ $key ] ) ) )[0] );
+			return $remote;
+		}
+
+		// X-Real-IP is a single value a proxy sets (overwriting any client
+		// copy), so it is only a fallback when no X-Forwarded-For was passed.
+		if ( ! empty( $_SERVER['HTTP_X_REAL_IP'] ) ) {
+			$ip = trim( sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_X_REAL_IP'] ) ) );
 			if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
 				return $ip;
 			}

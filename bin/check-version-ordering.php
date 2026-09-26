@@ -167,7 +167,7 @@ if (file_exists($repoRoot . '/.git') && trim((string) shell_exec('command -v git
         $since = trim((string) shell_exec(
             'git -C ' . escapeshellarg($repoRoot)
             . ' log --format=%h\ %s ' . escapeshellarg($tagCommit) . '..HEAD --no-merges --'
-            . ' includes admin assets languages xenios-kb-bot.php readme.txt 2>/dev/null'
+            . ' includes admin assets languages xenios-kb-bot.php uninstall.php readme.txt 2>/dev/null'
         ));
         // readme.txt is in that path list so a changelog-only edit counts as a
         // release commit; drop the bump commit itself from the report.
